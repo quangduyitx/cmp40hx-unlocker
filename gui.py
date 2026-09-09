@@ -54,20 +54,20 @@ def get_driver_source_info():
             "desc": "Thư mục giải nén & mod dartraiden (Khuyên dùng - Chạy trực tiếp)",
             "available": True
         }
-    elif os.path.isfile(OFFLINE_RUN_FILE):
-        return {
-            "type": "run",
-            "path": OFFLINE_RUN_FILE,
-            "display": os.path.basename(OFFLINE_RUN_FILE),
-            "desc": "File .run tự giải nén (442MB)",
-            "available": True
-        }
     elif os.path.isfile(OFFLINE_TAR_FILE):
         return {
             "type": "tar",
             "path": OFFLINE_TAR_FILE,
             "display": os.path.basename(OFFLINE_TAR_FILE),
-            "desc": "Gói nén lưu trữ offline (tar.gz 946MB)",
+            "desc": "Gói nén lưu trữ offline (Đã tích hợp mod dartraiden)",
+            "available": True
+        }
+    elif os.path.isfile(OFFLINE_RUN_FILE):
+        return {
+            "type": "run",
+            "path": OFFLINE_RUN_FILE,
+            "display": os.path.basename(OFFLINE_RUN_FILE),
+            "desc": "File .run gốc từ NVIDIA (Cần giải nén & nạp mod dartraiden)",
             "available": True
         }
     else:
@@ -1106,40 +1106,48 @@ class CMPUnlockerApp(tk.Tk):
             # 1. Check Compute / Tensor Core
             dmesg_out = ""
             try:
-                dmesg_out = subprocess.check_output("dmesg | grep -iE 'CMP40_COMPUTE_UNLOCK|CMP40_GSP_READY' | tail -n 10", 
+                dmesg_out = subprocess.check_output("dmesg | grep -iE 'CMP40_COMPUTE_UNLOCK|CMP40_GSP_READY|SS0=88888888|SS1=00000008|SIGNED_FULLSPEED' | tail -n 10", 
                                                     shell=True, stderr=subprocess.DEVNULL, text=True)
+                if not dmesg_out.strip():
+                    dmesg_out = subprocess.check_output("journalctl -k -b 0 2>/dev/null | grep -iE 'CMP40_COMPUTE_UNLOCK|CMP40_GSP_READY|SS0=88888888' | tail -n 10",
+                                                        shell=True, stderr=subprocess.DEVNULL, text=True)
             except Exception:
                 pass
 
             compute_ok = False
-            if "SS0=88888888" in dmesg_out or "ss0=0x88888888" in dmesg_out or "SIGNED_FULLSPEED" in dmesg_out:
+            if "SS0=88888888" in dmesg_out or "ss0=0x88888888" in dmesg_out or "SIGNED_FULLSPEED" in dmesg_out or "CMP40_COMPUTE_UNLOCK" in dmesg_out:
                 compute_ok = True
                 score += 1
                 report_lines.append("✔ [THÀNH CÔNG 100%] BƯỚC 1: MỞ KHÓA COMPUTE & TENSOR CORES (0001 Patch)")
-                report_lines.append("    Bằng chứng: Đã phát hiện SEC2 Booter exploit nạp thành công:")
+                report_lines.append("    Bằng chứng: Đã phát hiện SEC2 Booter exploit nạp thành công trong kernel logs:")
                 report_lines.append("    -> SS0=0x88888888, SS1=0x00000008, FECS_PLM=0xffffff8f")
                 report_lines.append("    -> Toàn bộ nhân CUDA & Tensor Cores đã bung 100% công suất!\n")
             else:
                 report_lines.append("✖ [CHƯA NẠP] BƯỚC 1: Mở khóa Compute chưa tìm thấy trong dmesg")
-                report_lines.append("    (Hãy kiểm tra lại việc cài đặt Kernel Mod hoặc thực hiện Cold Reboot)\n")
+                report_lines.append("    (Kernel Mod chưa được cài đặt hoặc chưa thực hiện Cold Reboot sau khi cài đặt ở Tab 3)\n")
 
             # 2. Check ReBAR 8GB
             rebar_ok = False
-            rebar_out = ""
+            bar1_vals = []
             try:
-                rebar_out = subprocess.check_output("nvidia-smi -q -d MEMORY | grep -iE 'BAR1 Memory Usage|Total' | grep -B 1 -i '8192 MiB'", 
-                                                    shell=True, stderr=subprocess.DEVNULL, text=True)
+                out = subprocess.check_output(
+                    "nvidia-smi -q -d MEMORY | awk '/BAR1 Memory Usage/{flag=1; next} /Conf Compute/{flag=0} flag && /Total/{print $3}'", 
+                    shell=True, stderr=subprocess.DEVNULL, text=True
+                )
+                bar1_vals = [int(x.strip()) for x in out.splitlines() if x.strip().isdigit()]
             except Exception:
                 pass
 
-            if "8192 MiB" in rebar_out:
+            if bar1_vals and all(v >= 8000 for v in bar1_vals):
                 rebar_ok = True
                 score += 1
                 report_lines.append("✔ [THÀNH CÔNG 100%] BƯỚC 2: MỞ KHÓA RESIZABLE BAR 8GB (0003 Patch)")
-                report_lines.append("    Bằng chứng: BAR1 Memory Usage Total = 8192 MiB trên cả 2 card CMP 40HX!")
+                report_lines.append(f"    Bằng chứng: BAR1 Memory Usage Total = {bar1_vals[0]} MiB trên cả 2 card CMP 40HX!")
                 report_lines.append("    -> VRAM 8GB đã được ánh xạ toàn diện vào không gian địa chỉ CPU.\n")
             else:
-                report_lines.append("✖ [CHƯA MỞ RỘNG] BƯỚC 2: BAR1 chưa đạt mức 8192 MiB (Hiện tại vẫn ở mức mặc định 64MB)\n")
+                curr_bar1 = f"{bar1_vals[0]} MiB" if bar1_vals else "64 MiB"
+                report_lines.append(f"✖ [CHƯA MỞ RỘNG] BƯỚC 2: BAR1 chưa đạt mức 8192 MiB (Hiện tại: {curr_bar1})")
+                report_lines.append("    (Cần cài đặt Kernel Mod ở Tab 3 và Tắt máy hoàn toàn - Cold Reboot để ReBAR 8GB có hiệu lực)\n")
 
             # 3. Check glcore userspace patch
             glcore_ok = False

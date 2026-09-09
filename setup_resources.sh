@@ -54,7 +54,21 @@ else
     fi
 fi
 
-# 2. Check / Clone Cyridd/cmpunlocker repository
+# 2. Check & Apply Dartraiden Patch to unpacked driver folder
+DART_ZIP="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VER}.zip"
+DART_URL="https://github.com/dartraiden/NVIDIA-patcher/releases/download/${DRIVER_VER}/NVIDIA-Linux-x86_64-${DRIVER_VER}.zip"
+
+if [[ -d "${EXTRACTED_DIR}" ]]; then
+    if [[ ! -f "${DART_ZIP}" ]]; then
+        step "Đang tải bản vá dartraiden mod cho CMP 40HX..."
+        curl -fSL "${DART_URL}" -o "${DART_ZIP}" || wget -c "${DART_URL}" -O "${DART_ZIP}"
+    fi
+    info "Đang nạp file kernel mod dartraiden (nv-kernel.o_binary) vào ${EXTRACTED_DIR}..."
+    unzip -o "${DART_ZIP}" -d "${EXTRACTED_DIR}"
+    info "Đã tích hợp hoàn tất bản mod dartraiden cho driver!"
+fi
+
+# 3. Check / Clone Cyridd/cmpunlocker repository
 if [[ ! -d "${CMP_DIR}/.git" ]]; then
     step "Đang tải mã nguồn bản mod từ https://github.com/Cyridd/cmpunlocker..."
     git clone https://github.com/Cyridd/cmpunlocker "${CMP_DIR}"
@@ -63,7 +77,7 @@ else
     info "Thư mục mã nguồn cmpunlocker đã sẵn sàng."
 fi
 
-# 3. Check / Download Open GPU Kernel Modules source
+# 4. Check / Download Open GPU Kernel Modules source
 mkdir -p "${CMP_DIR}"
 if [[ -f "${SRC_TARBALL}" ]]; then
     info "Đã có sẵn file mã nguồn kernel open modules: ${SRC_TARBALL}"
