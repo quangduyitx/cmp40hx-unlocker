@@ -206,11 +206,36 @@ install_kernel_mod() {
     cd "${CMP_DIR}"
     chmod +x install.sh
 
+    local tarball="${CMP_DIR}/open-gpu-kernel-modules-${DRIVER_VERSION}.tar.gz"
+    local src_dir="${CMP_DIR}/open-gpu-kernel-modules-${DRIVER_VERSION}"
+
+    if [[ ! -f "${tarball}" ]]; then
+        info "Chưa có file nén mã nguồn mở kernel ${tarball}. Đang tự động tải từ NVIDIA GitHub..."
+        local src_url="https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${DRIVER_VERSION}.tar.gz"
+        curl -fSL "${src_url}" -o "${tarball}" || wget -c "${src_url}" -O "${tarball}"
+    fi
+
+    # Luôn làm sạch thư mục nguồn đã giải nén cũ nếu có file tarball nguyên bản,
+    # tránh lỗi "cannot be applied / already partially modified" do dấu vết biên dịch cũ.
+    if [[ -d "${src_dir}" && -f "${tarball}" ]]; then
+        info "Làm sạch thư mục mã nguồn tạm cũ (${src_dir}) để giải nén nguyên bản và áp dụng mod đồng bộ..."
+        rm -rf "${src_dir}"
+    fi
+
     info "Thực thi install.sh với gói lưu trữ offline..."
     if [[ -n "${diag_flag}" ]]; then
         ./install.sh --no-download --pcie-diagnostic
     else
         ./install.sh --no-download
+    fi
+
+    # Trả quyền sở hữu thư mục về cho người dùng bình thường để tránh bị khóa bởi root
+    local real_user="${SUDO_USER:-}"
+    if [[ -z "${real_user}" ]]; then
+        real_user="$(logname 2>/dev/null || stat -c '%U' "${SCRIPT_DIR}")"
+    fi
+    if [[ -n "${real_user}" && "${real_user}" != "root" ]]; then
+        chown -R "${real_user}:${real_user}" "${CMP_DIR}" 2>/dev/null || true
     fi
 
     info "Hoàn tất cài đặt Kernel Module!"
