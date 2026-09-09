@@ -1,0 +1,3 @@
+[submodule "cmpunlocker"]
+	path = cmpunlocker
+	url = https://github.com/Cyridd/cmpunlocker.git

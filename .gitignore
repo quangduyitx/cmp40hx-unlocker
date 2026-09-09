@@ -1,0 +1,48 @@
+# Huge NVIDIA binary drivers and compressed packages
+*.run
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+NVIDIA-Linux-x86_64-*/
+cmpunlocker_mods_offline.tar.gz
+
+# Kernel source trees & compiled modules
+open-gpu-kernel-modules-*/
+cmpunlocker/open-gpu-kernel-modules-*/
+cmpunlocker/artifacts/
+cmpunlocker/cmp_glcore_patch/patch_glcore
+cmpunlocker/cmp_glcore_patch/libnvidia-glcore.so*
+local_glcore/
+
+# Build artifacts & temporary files
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.symvers
+*.order
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+
+# Backups and patched leftovers
+*.orig
+*.bak*
+*~
+*.swp
+
+# Python caches & virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
