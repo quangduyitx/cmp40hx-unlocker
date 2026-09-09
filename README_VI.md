@@ -1,6 +1,7 @@
 # NVIDIA CMP 40HX Unlocker & Optimizer Studio (Bản tiếng Việt)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Phiên bản: v1.0.0](https://img.shields.io/badge/Phi%C3%AAn%20b%E1%BA%A3n-v1.0.0-blue.svg)](https://github.com/quangduyitx/cmp40hx-unlocker/releases/tag/v1.0.0)
 [![Platform: Linux](https://img.shields.io/badge/Nền%20tảng-Linux%20(Mint%20%7C%20Ubuntu%20%7C%20Arch%20%7C%20Debian)-orange.svg)](https://kernel.org)
 [![Hardware: Turing TU106](https://img.shields.io/badge/Phần%20cứng-NVIDIA%20CMP%2040HX%20(TU106)-green.svg)](https://www.nvidia.com)
 [![Status: Fully Verified](https://img.shields.io/badge/Trạng%20thái-Xác%20minh%20100%25%20trên%20phần%20cứng-brightgreen.svg)]()
