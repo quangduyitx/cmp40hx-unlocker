@@ -34,6 +34,7 @@ ACCENT_CYAN = "#94e2d5"
 ACCENT_PURPLE = "#cba6f7"
 BTN_BG = "#313244"
 BTN_ACTIVE = "#45475a"
+BORDER_COLOR = "#313244"
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 CMP_DIR = os.path.join(APP_DIR, "cmpunlocker")
@@ -190,7 +191,7 @@ class CMPUnlockerApp(tk.Tk):
         # Notebook & Tabs
         self.style.configure("TNotebook", background=BG_COLOR, borderwidth=0)
         self.style.configure("TNotebook.Tab", background=SURFACE_COLOR, foreground=TEXT_COLOR, 
-                             padding=[13, 8], font=("Segoe UI", 10, "bold"))
+                             padding=[10, 6], font=("Segoe UI", 9, "bold"))
         self.style.map("TNotebook.Tab", 
                        background=[("selected", ACCENT_BLUE)], 
                        foreground=[("selected", "#11111b")])
@@ -198,6 +199,53 @@ class CMPUnlockerApp(tk.Tk):
         # Frames
         self.style.configure("Card.TFrame", background=SURFACE_COLOR, relief="flat")
         self.style.configure("Header.TFrame", background=HEADER_COLOR, relief="flat")
+
+        # Treeview (Dark Theme)
+        self.style.configure(
+            "Treeview",
+            background="#1e1e2e",
+            fieldbackground="#1e1e2e",
+            foreground=TEXT_COLOR,
+            rowheight=26,
+            font=("Segoe UI", 9),
+            borderwidth=0,
+            relief="flat"
+        )
+        self.style.map(
+            "Treeview",
+            background=[("selected", "#313244")],
+            foreground=[("selected", ACCENT_CYAN)]
+        )
+        self.style.configure(
+            "Treeview.Heading",
+            background="#11111b",
+            foreground=ACCENT_BLUE,
+            font=("Segoe UI", 9, "bold"),
+            borderwidth=1,
+            relief="flat",
+            padding=[6, 6]
+        )
+        self.style.map(
+            "Treeview.Heading",
+            background=[("active", "#181825"), ("pressed", "#11111b")],
+            foreground=[("active", ACCENT_CYAN)]
+        )
+
+        # Combobox (Dark Theme)
+        self.style.configure(
+            "TCombobox",
+            background=BTN_BG,
+            foreground=TEXT_COLOR,
+            fieldbackground=SURFACE_COLOR,
+            darkcolor=SURFACE_COLOR,
+            lightcolor=SURFACE_COLOR,
+            arrowcolor=TEXT_COLOR
+        )
+        self.style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", SURFACE_COLOR)],
+            foreground=[("readonly", TEXT_COLOR)]
+        )
 
         # Buttons
         self.style.configure("Primary.TButton", background=ACCENT_BLUE, foreground="#11111b",
@@ -260,32 +308,32 @@ class CMPUnlockerApp(tk.Tk):
 
         # Tab 1: Checks & Packages
         self.tab_checks = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_checks, text="🔍 1. Kiểm tra điều kiện")
+        self.notebook.add(self.tab_checks, text="🔍 1. Kiểm tra")
         self.build_checks_tab()
 
         # Tab 2: Driver Offline Installer
         self.tab_driver = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_driver, text="💾 2. Cài đặt Driver 40HX (Offline)")
+        self.notebook.add(self.tab_driver, text="💾 2. Cài Driver")
         self.build_driver_tab()
 
         # Tab 3: Kernel Unlock
         self.tab_kernel = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_kernel, text="🚀 3. Mở khóa Kernel (Open Module)")
+        self.notebook.add(self.tab_kernel, text="🚀 3. Mở khóa Kernel")
         self.build_kernel_tab()
 
         # Tab 4: Vulkan glcore Patch
         self.tab_glcore = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_glcore, text="🎮 4. Vá Vulkan glcore")
+        self.notebook.add(self.tab_glcore, text="🎮 4. Vá Vulkan")
         self.build_glcore_tab()
 
         # Tab 5: Verification & Audit Tool
         self.tab_audit = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_audit, text="📊 5. Xác minh toàn diện Mod")
+        self.notebook.add(self.tab_audit, text="📊 5. Xác minh Mod")
         self.build_audit_tab()
 
         # Tab 6: Rollback
         self.tab_rollback = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_rollback, text="🔄 6. Khôi phục gốc")
+        self.notebook.add(self.tab_rollback, text="🔄 6. Khôi phục")
         self.build_rollback_tab()
 
     def create_status_bar(self):
@@ -354,14 +402,53 @@ class CMPUnlockerApp(tk.Tk):
 
     # ----------------- TAB 2: Driver Offline Installer -----------------
     def build_driver_tab(self):
-        desc = ttk.Frame(self.tab_driver, style="Card.TFrame", padding=12)
+        desc = ttk.Frame(self.tab_driver, style="Card.TFrame", padding=14)
         desc.pack(fill="x", pady=(0, 10))
 
-        tk.Label(desc, text="💾 Cài đặt Driver NVIDIA 610.57.04 từ gói Offline có sẵn", 
-                 font=("Segoe UI", 11, "bold"), bg=SURFACE_COLOR, fg=ACCENT_YELLOW).pack(anchor="w")
+        # Header with Title & Status Badge
+        hdr = ttk.Frame(desc, style="Card.TFrame")
+        hdr.pack(fill="x", pady=(0, 8))
 
-        self.lbl_driver_info = tk.Label(desc, text="", font=("Segoe UI", 9), bg=SURFACE_COLOR, fg=TEXT_COLOR, justify="left")
-        self.lbl_driver_info.pack(anchor="w", pady=(5, 5))
+        tk.Label(hdr, text="💾 BỘ CÀI ĐẶT DRIVER NVIDIA 610.57.04 (DARTRAIDEN MOD)", 
+                 font=("Segoe UI", 11, "bold"), bg=SURFACE_COLOR, fg=ACCENT_YELLOW).pack(side="left")
+
+        self.lbl_driver_badge = tk.Label(hdr, text="", font=("Segoe UI", 9, "bold"), padx=10, pady=3)
+        self.lbl_driver_badge.pack(side="right")
+
+        # Grid layout for driver info
+        info_grid = ttk.Frame(desc, style="Card.TFrame")
+        info_grid.pack(fill="x", pady=(2, 6))
+
+        tk.Label(info_grid, text="Trạng thái bản mod:", font=("Segoe UI", 9, "bold"), 
+                 bg=SURFACE_COLOR, fg=SUBTEXT_COLOR, width=20, anchor="w").grid(row=0, column=0, sticky="w", pady=3)
+        self.lbl_drv_mod_status = tk.Label(info_grid, text="", font=("Segoe UI", 9, "bold"), 
+                                           bg=SURFACE_COLOR, fg=ACCENT_GREEN, anchor="w")
+        self.lbl_drv_mod_status.grid(row=0, column=1, sticky="w", pady=3)
+
+        tk.Label(info_grid, text="Nguồn thực thi:", font=("Segoe UI", 9, "bold"), 
+                 bg=SURFACE_COLOR, fg=SUBTEXT_COLOR, width=20, anchor="w").grid(row=1, column=0, sticky="w", pady=3)
+        self.lbl_drv_source = tk.Label(info_grid, text="", font=("Segoe UI", 9), 
+                                       bg=SURFACE_COLOR, fg=ACCENT_CYAN, anchor="w")
+        self.lbl_drv_source.grid(row=1, column=1, sticky="w", pady=3)
+
+        tk.Label(info_grid, text="Kiểm định SHA256:", font=("Segoe UI", 9, "bold"), 
+                 bg=SURFACE_COLOR, fg=SUBTEXT_COLOR, width=20, anchor="w").grid(row=2, column=0, sticky="w", pady=3)
+        self.lbl_drv_sha = tk.Label(info_grid, text="", font=("Cascadia Mono", 9), 
+                                    bg=SURFACE_COLOR, fg=TEXT_COLOR, anchor="w")
+        self.lbl_drv_sha.grid(row=2, column=1, sticky="w", pady=3)
+
+        # Automation note separator & description
+        sep = tk.Frame(desc, height=1, bg=BORDER_COLOR)
+        sep.pack(fill="x", pady=(8, 8))
+
+        tk.Label(
+            desc, 
+            text="⚡ Quy trình tự động hóa cho CMP 40HX:\n"
+                 "   Nếu máy chưa có thư mục giải nén chuẩn mod Dartraiden, hệ thống sẽ tự động tải file từ NVIDIA,\n"
+                 "   chạy --extract-only, tải bản mod từ GitHub dartraiden và ghi đè nv-kernel.o_binary trước khi cài đặt.",
+            font=("Segoe UI", 8), bg=SURFACE_COLOR, fg=SUBTEXT_COLOR, justify="left"
+        ).pack(anchor="w")
+
         self.update_driver_tab_info()
 
         # Options
@@ -415,38 +502,53 @@ class CMPUnlockerApp(tk.Tk):
         drv_info = get_driver_source_info()
         installer_exists = os.path.isfile(DRIVER_INSTALLER)
         run_exists = os.path.isfile(OFFLINE_RUN_FILE)
-        tar_exists = os.path.isfile(OFFLINE_TAR_FILE)
 
         extracted_dir = os.path.join(APP_DIR, f"NVIDIA-Linux-x86_64-{DRIVER_VER}")
         nv_kernel_obj = os.path.join(extracted_dir, "kernel", "nvidia", "nv-kernel.o_binary")
         is_modded = check_nv_kernel_dartraiden_mod(nv_kernel_obj)
 
         if installer_exists and is_modded:
-            status_installer = "✔ ĐÃ SẴN SÀNG (Chuẩn mod Dartraiden - Chạy trực tiếp)"
+            badge_text = " ✔ SẴN SÀNG CÀI ĐẶT "
+            badge_bg = "#1e3a29"
+            badge_fg = ACCENT_GREEN
+            mod_status = "✔ Đã nạp Mod Dartraiden (Hỗ trợ xuất hình 3D cho Mining Cards)"
+            mod_fg = ACCENT_GREEN
+            source_text = f"NVIDIA-Linux-x86_64-{DRIVER_VER}/nvidia-installer (Trực tiếp)"
+            sha_text = f"{DARTRAIDEN_EXPECTED_SHA256} (Khớp chuẩn 100%)"
+            sha_fg = ACCENT_GREEN
         elif installer_exists:
-            status_installer = "⚠ Đã giải nén nhưng CHƯA nạp mod (Sẽ tự động mod khi cài)"
+            badge_text = " ⚠ CHƯA NẠP MOD "
+            badge_bg = "#3d3215"
+            badge_fg = ACCENT_YELLOW
+            mod_status = "⚠ Đã giải nén nhưng chưa nạp mod (Sẽ tự nạp mod khi cài đặt)"
+            mod_fg = ACCENT_YELLOW
+            source_text = f"NVIDIA-Linux-x86_64-{DRIVER_VER} (Cần ghi đè nv-kernel.o_binary)"
+            sha_text = "Chưa nạp bản vá từ GitHub Dartraiden"
+            sha_fg = ACCENT_YELLOW
+        elif run_exists:
+            badge_text = " 📦 CÓ SẴN FILE .RUN "
+            badge_bg = "#1b2b3a"
+            badge_fg = ACCENT_CYAN
+            mod_status = "⏳ Sẽ tự giải nén (--extract-only) và nạp mod Dartraiden khi chạy"
+            mod_fg = ACCENT_CYAN
+            source_text = f"File cài đặt gốc: {os.path.basename(OFFLINE_RUN_FILE)}"
+            sha_text = "Sẽ tải & kiểm định SHA256 tự động từ GitHub"
+            sha_fg = SUBTEXT_COLOR
         else:
-            status_installer = "✖ Chưa giải nén"
+            badge_text = " 🌐 CHƯA TẢI DRIVER "
+            badge_bg = "#3a1e24"
+            badge_fg = ACCENT_RED
+            mod_status = "🌐 Sẽ tự động tải từ nvidia.com và nạp mod Dartraiden khi cài đặt"
+            mod_fg = ACCENT_RED
+            source_text = "Tự động tải trực tuyến (Yêu cầu kết nối mạng)"
+            sha_text = "Tự động tải & kiểm tra mã băm SHA256"
+            sha_fg = SUBTEXT_COLOR
 
-        status_tar = f"✔ Có sẵn ({os.path.basename(OFFLINE_TAR_FILE)} - Đã tích hợp mod)" if tar_exists else "✖ Thiếu"
-        status_run = f"✔ Có sẵn ({os.path.basename(OFFLINE_RUN_FILE)} - Gốc NVIDIA)" if run_exists else "✖ Chưa tải"
-
-        info_text = (
-            f"Bộ cài đặt Driver NVIDIA {DRIVER_VER} được kiểm soát tự động theo chuẩn Dartraiden:\n"
-            f"  • [ƯU TIÊN] Thư mục nvidia-installer trực tiếp: {DRIVER_INSTALLER}\n"
-            f"      -> Trạng thái: {status_installer}\n"
-            f"  • Gói nén lưu trữ offline (.tar.gz): {os.path.basename(OFFLINE_TAR_FILE)}\n"
-            f"      -> Trạng thái: {status_tar}\n"
-            f"  • File cài đặt gốc từ NVIDIA (.run): {os.path.basename(OFFLINE_RUN_FILE)}\n"
-            f"      -> Trạng thái: {status_run}\n\n"
-            f"🎯 Nguồn cài đặt hiện tại: {drv_info['display']}\n"
-            f"   Chi tiết: {drv_info['desc']}\n\n"
-            "💡 Quy trình tự động chuẩn hoá cho CMP 40HX:\n"
-            "Nếu máy chưa có thư mục giải nén chuẩn mod Dartraiden, hệ thống sẽ tự động tải file từ NVIDIA,\n"
-            "chạy --extract-only, tải bản mod từ GitHub dartraiden và ghi đè nv-kernel.o_binary trước khi cài đặt!"
-        )
-        if hasattr(self, "lbl_driver_info"):
-            self.lbl_driver_info.config(text=info_text)
+        if hasattr(self, "lbl_driver_badge"):
+            self.lbl_driver_badge.config(text=badge_text, bg=badge_bg, fg=badge_fg)
+            self.lbl_drv_mod_status.config(text=mod_status, fg=mod_fg)
+            self.lbl_drv_source.config(text=source_text)
+            self.lbl_drv_sha.config(text=sha_text, fg=sha_fg)
 
     # ----------------- TAB 3: Kernel Mod -----------------
     def build_kernel_tab(self):
@@ -596,9 +698,9 @@ class CMPUnlockerApp(tk.Tk):
             font=("Segoe UI", 9), bg=SURFACE_COLOR, fg=SUBTEXT_COLOR
         ).pack(anchor="w", pady=(2, 8))
 
-        # Big 1-click test button
+        # Action buttons (2 rows to prevent squishing)
         btn_box = ttk.Frame(desc, style="Card.TFrame")
-        btn_box.pack(fill="x")
+        btn_box.pack(fill="x", pady=(0, 6))
 
         self.btn_run_audit = ttk.Button(
             btn_box, 
@@ -609,12 +711,19 @@ class CMPUnlockerApp(tk.Tk):
         self.btn_run_audit.pack(side="left", padx=(0, 10))
 
         ttk.Button(btn_box, text="🔥 Đo TFLOPS (Compute & Tensor)", style="Primary.TButton", 
-                   command=self.run_tflops_benchmark_async).pack(side="left", padx=3)
-        ttk.Button(btn_box, text="Kiểm tra nvidia-smi", style="Normal.TButton", 
+                   command=self.run_tflops_benchmark_async).pack(side="left")
+
+        diag_box = ttk.Frame(desc, style="Card.TFrame")
+        diag_box.pack(fill="x", pady=(4, 0))
+
+        tk.Label(diag_box, text="Chẩn đoán nhanh:", font=("Segoe UI", 9, "bold"), 
+                 bg=SURFACE_COLOR, fg=SUBTEXT_COLOR).pack(side="left", padx=(0, 8))
+
+        ttk.Button(diag_box, text="nvidia-smi", style="Normal.TButton", 
                    command=lambda: self.run_diag_cmd("nvidia-smi")).pack(side="left", padx=3)
-        ttk.Button(btn_box, text="Kiểm tra PCIe Link (lspci)", style="Normal.TButton", 
+        ttk.Button(diag_box, text="PCIe Link (lspci)", style="Normal.TButton", 
                    command=self.diag_check_pcie).pack(side="left", padx=3)
-        ttk.Button(btn_box, text="Kiểm tra dmesg CMP40", style="Normal.TButton", 
+        ttk.Button(diag_box, text="dmesg CMP40", style="Normal.TButton", 
                    command=lambda: self.run_diag_cmd("dmesg | grep -iE 'CMP40|nvidia' | tail -n 35")).pack(side="left", padx=3)
 
         # Audit Scorecard Frame
@@ -1081,9 +1190,9 @@ class CMPUnlockerApp(tk.Tk):
                 tag = status.lower()
                 self.checks_tree.insert("", "end", values=(item, cur, req, status), tags=(tag,))
 
-            self.checks_tree.tag_configure("pass", foreground=ACCENT_GREEN)
-            self.checks_tree.tag_configure("warn", foreground=ACCENT_YELLOW)
-            self.checks_tree.tag_configure("fail", foreground=ACCENT_RED)
+            self.checks_tree.tag_configure("pass", foreground=ACCENT_GREEN, background="#1e1e2e")
+            self.checks_tree.tag_configure("warn", foreground=ACCENT_YELLOW, background="#1e1e2e")
+            self.checks_tree.tag_configure("fail", foreground=ACCENT_RED, background="#1e1e2e")
 
             if self.missing_packages:
                 self.btn_install_pkgs.pack(side="left", padx=(0, 5))
