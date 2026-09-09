@@ -8,6 +8,7 @@ Kiểm tra hiệu năng thực tế sau khi áp dụng bản mod Cyridd:
 - FP16 Tensor Core MMA Benchmark (Mục tiêu: ~48.0 - 63.8 TFLOPS, Trước mod: Bị khóa)
 """
 
+import os
 import sys
 import time
 
@@ -15,6 +16,21 @@ def run_benchmark():
     try:
         import torch
     except ImportError:
+        # Tự động tìm kiếm môi trường venv có sẵn PyTorch CUDA (ví dụ: ~/lada/.venv)
+        candidates = [
+            os.path.expanduser("~/lada/.venv/bin/python"),
+            os.path.expanduser("~/.venv/bin/python"),
+            os.path.expanduser("~/pytorch-gfx906/.venv/bin/python")
+        ]
+        for venv_py in candidates:
+            if os.path.isfile(venv_py) and os.access(venv_py, os.X_OK):
+                try:
+                    out = os.popen(f"'{venv_py}' -c 'import torch; print(torch.cuda.is_available())'").read().strip()
+                    if out == "True":
+                        os.execv(venv_py, [venv_py] + sys.argv)
+                except Exception:
+                    pass
+
         print("[LỖI / ERROR] PyTorch chưa được cài đặt trong môi trường Python hiện tại.")
         print("Gợi ý / Tip: Hãy chạy bằng môi trường Python có PyTorch CUDA, ví dụ:")
         print("  <path-to-venv>/bin/python " + sys.argv[0])

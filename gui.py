@@ -710,7 +710,10 @@ class CMPUnlockerApp(tk.Tk):
         )
         self.btn_run_audit.pack(side="left", padx=(0, 10))
 
-        ttk.Button(btn_box, text="🔥 Đo TFLOPS (Compute & Tensor)", style="Primary.TButton", 
+        ttk.Button(btn_box, text="⚡ Đo TFLOPS Native C++ (clpeak)", style="Primary.TButton", 
+                   command=self.run_native_benchmark_async).pack(side="left", padx=(0, 6))
+
+        ttk.Button(btn_box, text="🔥 Đo Tensor Cores (PyTorch)", style="Update.TButton", 
                    command=self.run_tflops_benchmark_async).pack(side="left")
 
         diag_box = ttk.Frame(desc, style="Card.TFrame")
@@ -1486,6 +1489,37 @@ class CMPUnlockerApp(tk.Tk):
             "done"
         )
         self.run_diag_cmd(cmd)
+
+    def run_native_benchmark_async(self):
+        if self.is_busy:
+            messagebox.showinfo("Thông báo", "Một tác vụ khác đang chạy!")
+            return
+
+        native_script = os.path.join(APP_DIR, "test_compute_native.sh")
+        if not os.path.isfile(native_script):
+            messagebox.showerror("Lỗi", f"Không tìm thấy script benchmark: {native_script}")
+            return
+
+        self.is_busy = True
+        self.lbl_status.config(text="Đang đo hiệu năng tính toán bằng công cụ Native C++ (clpeak)...")
+        self.log(self.txt_audit_log, "\n=== BẮT ĐẦU ĐO HIỆU NĂNG TÍNH TOÁN NATIVE C++ (KHÔNG DÙNG PYTHON) ===", clear=True)
+
+        def _worker():
+            try:
+                p = subprocess.Popen(["bash", native_script], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+                for line in p.stdout:
+                    self.log(self.txt_audit_log, line.rstrip())
+                p.wait()
+            except Exception as e:
+                self.log(self.txt_audit_log, f"\n[LỖI] {str(e)}")
+            finally:
+                def _done():
+                    self.is_busy = False
+                    self.lbl_status.config(text="Đã hoàn tất đo hiệu năng Native C++!")
+                    messagebox.showinfo("Hoàn tất", "Đã đo xong hiệu năng Native C++ (clpeak)! Xem kết quả chi tiết trong khung nhật ký.")
+                self.after(0, _done)
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def run_tflops_benchmark_async(self):
         if self.is_busy:
