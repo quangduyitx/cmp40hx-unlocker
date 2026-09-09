@@ -44,22 +44,55 @@ DRIVER_INSTALLER = os.path.join(DRIVER_DIR, "nvidia-installer")
 OFFLINE_RUN_FILE = os.path.join(APP_DIR, f"NVIDIA-Linux-x86_64-{DRIVER_VER}.run")
 OFFLINE_TAR_FILE = os.path.join(APP_DIR, f"NVIDIA-Linux-x86_64-{DRIVER_VER}.tar.gz")
 
+DARTRAIDEN_EXPECTED_SHA256 = "c4f765e92507f350cd7aa7f45fe4c8c6496a9d244d192849e3d9fa31e69a2a57"
+
+def check_nv_kernel_dartraiden_mod(nv_obj_path):
+    """Kiểm tra mã băm SHA256 của nv-kernel.o_binary xem có khớp bản mod Dartraiden không."""
+    if not os.path.isfile(nv_obj_path):
+        return False
+    try:
+        import hashlib
+        h = hashlib.sha256()
+        with open(nv_obj_path, "rb") as f:
+            while chunk := f.read(65536):
+                h.update(chunk)
+        return h.hexdigest().lower() == DARTRAIDEN_EXPECTED_SHA256
+    except Exception:
+        return False
+
 def get_driver_source_info():
-    """Kiểm tra và trả về thông tin bộ cài driver offline được ưu tiên."""
-    if os.path.isfile(DRIVER_INSTALLER):
-        return {
-            "type": "directory",
-            "path": DRIVER_INSTALLER,
-            "display": f"NVIDIA-Linux-x86_64-{DRIVER_VER}/nvidia-installer",
-            "desc": "Thư mục giải nén & mod dartraiden (Khuyên dùng - Chạy trực tiếp)",
-            "available": True
-        }
+    """Kiểm tra và trả về thông tin chi tiết về bộ cài driver offline và trạng thái mod Dartraiden."""
+    extracted_dir = os.path.join(APP_DIR, f"NVIDIA-Linux-x86_64-{DRIVER_VER}")
+    installer_path = os.path.join(extracted_dir, "nvidia-installer")
+    nv_kernel_obj = os.path.join(extracted_dir, "kernel", "nvidia", "nv-kernel.o_binary")
+    is_modded = check_nv_kernel_dartraiden_mod(nv_kernel_obj)
+
+    if os.path.isfile(installer_path) and os.access(installer_path, os.X_OK):
+        if is_modded:
+            return {
+                "type": "directory",
+                "path": installer_path,
+                "display": f"NVIDIA-Linux-x86_64-{DRIVER_VER}/nvidia-installer",
+                "desc": "Thư mục giải nén chuẩn mod Dartraiden (nv-kernel.o_binary khớp 100% SHA256)",
+                "is_modded": True,
+                "available": True
+            }
+        else:
+            return {
+                "type": "directory_unmodded",
+                "path": installer_path,
+                "display": f"NVIDIA-Linux-x86_64-{DRIVER_VER}/nvidia-installer",
+                "desc": "Thư mục driver giải nén nhưng CHƯA nạp mod Dartraiden (Sẽ tự động nạp khi cài đặt)",
+                "is_modded": False,
+                "available": True
+            }
     elif os.path.isfile(OFFLINE_TAR_FILE):
         return {
             "type": "tar",
             "path": OFFLINE_TAR_FILE,
             "display": os.path.basename(OFFLINE_TAR_FILE),
-            "desc": "Gói nén lưu trữ offline (Đã tích hợp mod dartraiden)",
+            "desc": "Gói nén lưu trữ offline (Đã tích hợp mod Dartraiden)",
+            "is_modded": True,
             "available": True
         }
     elif os.path.isfile(OFFLINE_RUN_FILE):
@@ -67,15 +100,17 @@ def get_driver_source_info():
             "type": "run",
             "path": OFFLINE_RUN_FILE,
             "display": os.path.basename(OFFLINE_RUN_FILE),
-            "desc": "File .run gốc từ NVIDIA (Cần giải nén & nạp mod dartraiden)",
+            "desc": "File .run gốc NVIDIA (Sẽ tự động chạy --extract-only & nạp mod Dartraiden khi cài đặt)",
+            "is_modded": False,
             "available": True
         }
     else:
         return {
             "type": "none",
             "path": None,
-            "display": "Không tìm thấy",
-            "desc": "Chưa có bộ cài offline",
+            "display": "Chưa có sẵn trên máy",
+            "desc": "Hệ thống sẽ tự động tải từ NVIDIA & nạp mod Dartraiden khi nhấn cài đặt",
+            "is_modded": False,
             "available": False
         }
 
@@ -359,7 +394,11 @@ class CMPUnlockerApp(tk.Tk):
                                              style="Primary.TButton", command=self.on_install_driver_click)
         self.btn_install_driver.pack(side="left", padx=(0, 10))
 
-        self.driver_prog = ttk.Progressbar(act_frame, mode="indeterminate", length=300)
+        self.btn_prepare_driver = ttk.Button(act_frame, text="🛠️ Chuẩn bị & Mod Dartraiden", 
+                                             command=self.on_prepare_driver_click)
+        self.btn_prepare_driver.pack(side="left", padx=(0, 10))
+
+        self.driver_prog = ttk.Progressbar(act_frame, mode="indeterminate", length=250)
         self.driver_prog.pack(side="left", fill="x", expand=True)
 
         # Log
@@ -378,22 +417,33 @@ class CMPUnlockerApp(tk.Tk):
         run_exists = os.path.isfile(OFFLINE_RUN_FILE)
         tar_exists = os.path.isfile(OFFLINE_TAR_FILE)
 
-        status_installer = "✔ Có sẵn (Khuyên dùng - Chạy trực tiếp, bảo toàn mod dartraiden)" if installer_exists else "✖ Chưa có"
-        status_run = f"✔ Có sẵn ({os.path.basename(OFFLINE_RUN_FILE)})" if run_exists else "✖ Thiếu"
-        status_tar = f"✔ Có sẵn ({os.path.basename(OFFLINE_TAR_FILE)})" if tar_exists else "✖ Thiếu"
+        extracted_dir = os.path.join(APP_DIR, f"NVIDIA-Linux-x86_64-{DRIVER_VER}")
+        nv_kernel_obj = os.path.join(extracted_dir, "kernel", "nvidia", "nv-kernel.o_binary")
+        is_modded = check_nv_kernel_dartraiden_mod(nv_kernel_obj)
+
+        if installer_exists and is_modded:
+            status_installer = "✔ ĐÃ SẴN SÀNG (Chuẩn mod Dartraiden - Chạy trực tiếp)"
+        elif installer_exists:
+            status_installer = "⚠ Đã giải nén nhưng CHƯA nạp mod (Sẽ tự động mod khi cài)"
+        else:
+            status_installer = "✖ Chưa giải nén"
+
+        status_tar = f"✔ Có sẵn ({os.path.basename(OFFLINE_TAR_FILE)} - Đã tích hợp mod)" if tar_exists else "✖ Thiếu"
+        status_run = f"✔ Có sẵn ({os.path.basename(OFFLINE_RUN_FILE)} - Gốc NVIDIA)" if run_exists else "✖ Chưa tải"
 
         info_text = (
-            f"Bộ cài đặt Driver chính thức của NVIDIA ({DRIVER_VER}) được lưu trữ tại thư mục dự án:\n"
-            f"  • [ƯU TIÊN] nvidia-installer trực tiếp: {DRIVER_INSTALLER}\n"
+            f"Bộ cài đặt Driver NVIDIA {DRIVER_VER} được kiểm soát tự động theo chuẩn Dartraiden:\n"
+            f"  • [ƯU TIÊN] Thư mục nvidia-installer trực tiếp: {DRIVER_INSTALLER}\n"
             f"      -> Trạng thái: {status_installer}\n"
-            f"  • File cài đặt tự giải nén (.run): {os.path.basename(OFFLINE_RUN_FILE)}\n"
-            f"      -> Trạng thái: {status_run}\n"
-            f"  • Gói nén lưu trữ dự phòng (.tar.gz): {os.path.basename(OFFLINE_TAR_FILE)}\n"
-            f"      -> Trạng thái: {status_tar}\n\n"
-            f"🎯 Nguồn cài đặt đang trỏ tới: {drv_info['display']}\n"
+            f"  • Gói nén lưu trữ offline (.tar.gz): {os.path.basename(OFFLINE_TAR_FILE)}\n"
+            f"      -> Trạng thái: {status_tar}\n"
+            f"  • File cài đặt gốc từ NVIDIA (.run): {os.path.basename(OFFLINE_RUN_FILE)}\n"
+            f"      -> Trạng thái: {status_run}\n\n"
+            f"🎯 Nguồn cài đặt hiện tại: {drv_info['display']}\n"
             f"   Chi tiết: {drv_info['desc']}\n\n"
-            "Tính năng này giúp bạn cài đặt hoặc khôi phục lại Driver NVIDIA tương thích bất cứ lúc nào\n"
-            "mà hoàn toàn không cần kết nối Internet."
+            "💡 Quy trình tự động chuẩn hoá cho CMP 40HX:\n"
+            "Nếu máy chưa có thư mục giải nén chuẩn mod Dartraiden, hệ thống sẽ tự động tải file từ NVIDIA,\n"
+            "chạy --extract-only, tải bản mod từ GitHub dartraiden và ghi đè nv-kernel.o_binary trước khi cài đặt!"
         )
         if hasattr(self, "lbl_driver_info"):
             self.lbl_driver_info.config(text=info_text)
@@ -698,31 +748,32 @@ class CMPUnlockerApp(tk.Tk):
 
         drv_info = get_driver_source_info()
         if not drv_info["available"]:
-            messagebox.showerror(
-                "Lỗi", 
-                f"Không tìm thấy bộ cài đặt driver nào tại:\n"
-                f"  1. {DRIVER_INSTALLER}\n"
-                f"  2. {OFFLINE_RUN_FILE}\n"
-                f"  3. {OFFLINE_TAR_FILE}"
+            msg_download = (
+                f"Chưa tìm thấy bộ cài đặt Driver NVIDIA {DRIVER_VER} trên máy.\n\n"
+                "Bạn có muốn hệ thống tự động tải bản cài từ NVIDIA, chạy --extract-only,\n"
+                "tải bản mod từ GitHub dartraiden và tích hợp nv-kernel.o_binary trước khi cài đặt không?"
             )
-            return
+            if not messagebox.askyesno("Tự động Chuẩn bị & Cài đặt", msg_download):
+                return
 
         msg = (
             f"Bạn có chắc muốn cài đặt Driver NVIDIA {DRIVER_VER}?\n\n"
             f"Nguồn bộ cài: {drv_info['display']}\n"
-            f"Đường dẫn: {drv_info['path']}\n"
-            f"Đặc điểm: {drv_info['desc']}\n\n"
+            f"Trạng thái mod: {'✔ Đã nạp mod Dartraiden' if drv_info.get('is_modded') else '⚠ Sẽ tự động nạp mod Dartraiden'}\n"
+            f"Chi tiết: {drv_info['desc']}\n\n"
             f"Tùy chọn:\n"
             f"  • Không ghi đè OpenGL: {'BẬT (Khuyên dùng)' if self.var_drv_noopengl.get() else 'Tắt'}\n"
             f"  • Kích hoạt DKMS: {'BẬT' if self.var_drv_dkms.get() else 'Tắt'}\n\n"
             "Quá trình cài đặt driver sẽ mất khoảng 1-2 phút."
         )
 
-        if not messagebox.askyesno("Xác nhận", msg):
+        if not messagebox.askyesno("Xác nhận Cài đặt", msg):
             return
 
         self.is_busy = True
         self.btn_install_driver.config(state="disabled")
+        if hasattr(self, "btn_prepare_driver"):
+            self.btn_prepare_driver.config(state="disabled")
         self.driver_prog.start(10)
         self.lbl_status.config(text=f"Đang cài đặt Driver NVIDIA {DRIVER_VER}...")
         self.log(self.txt_driver_log, f"=== BẮT ĐẦU CÀI ĐẶT DRIVER NVIDIA {DRIVER_VER} ===", clear=True)
@@ -739,14 +790,70 @@ class CMPUnlockerApp(tk.Tk):
             def _done():
                 self.driver_prog.stop()
                 self.btn_install_driver.config(state="normal")
+                if hasattr(self, "btn_prepare_driver"):
+                    self.btn_prepare_driver.config(state="normal")
                 self.is_busy = False
+                self.update_driver_tab_info()
                 self.run_checks_async()
                 if ret == 0:
                     self.lbl_status.config(text="Cài đặt Driver NVIDIA thành công!")
-                    messagebox.showinfo("Thành công", f"Đã cài đặt thành công Driver NVIDIA {DRIVER_VER}!")
+                    messagebox.showinfo("Thành công", f"Đã cài đặt thành công Driver NVIDIA {DRIVER_VER} chuẩn mod Dartraiden!")
                 else:
                     self.lbl_status.config(text="Cài đặt Driver thất bại.")
                     messagebox.showerror("Lỗi", "Cài đặt Driver thất bại. Xem chi tiết log!")
+            self.after(0, _done)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def on_prepare_driver_click(self):
+        if self.is_busy:
+            messagebox.showinfo("Thông báo", "Một tác vụ khác đang được thực thi!")
+            return
+
+        msg = (
+            f"Hệ thống sẽ kiểm tra và chuẩn bị thư mục Driver mod Dartraiden:\n"
+            f"  1. Tải bộ cài NVIDIA {DRIVER_VER}.run từ NVIDIA (nếu chưa có)\n"
+            f"  2. Chạy lệnh --extract-only giải nén ra thư mục\n"
+            f"  3. Tải gói mod từ GitHub dartraiden và ghi đè nv-kernel.o_binary\n"
+            f"  4. Xác minh mã băm SHA256 chuẩn mod\n\n"
+            "Bạn có muốn tiến hành ngay không?"
+        )
+        if not messagebox.askyesno("Chuẩn bị Driver Mod", msg):
+            return
+
+        self.is_busy = True
+        self.btn_install_driver.config(state="disabled")
+        self.btn_prepare_driver.config(state="disabled")
+        self.driver_prog.start(10)
+        self.lbl_status.config(text="Đang chuẩn bị bộ cài Driver mod Dartraiden...")
+        self.log(self.txt_driver_log, "=== BẮT ĐẦU CHUẨN BỊ BỘ CÀI DRIVER MOD DARTRAIDEN ===", clear=True)
+
+        def _worker():
+            cmd = ["bash", BACKEND_SCRIPT, "prepare-driver"]
+            self.log(self.txt_driver_log, f"[RUN] {' '.join(cmd)}\n")
+            ret = -1
+            try:
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                     text=True, bufsize=1, universal_newlines=True)
+                for line in p.stdout:
+                    self.log(self.txt_driver_log, line.rstrip())
+                p.wait()
+                ret = p.returncode
+            except Exception as e:
+                self.log(self.txt_driver_log, f"Lỗi: {e}")
+
+            def _done():
+                self.driver_prog.stop()
+                self.btn_install_driver.config(state="normal")
+                self.btn_prepare_driver.config(state="normal")
+                self.is_busy = False
+                self.update_driver_tab_info()
+                if ret == 0:
+                    self.lbl_status.config(text="Đã chuẩn bị xong bộ cài driver mod Dartraiden!")
+                    messagebox.showinfo("Thành công", "Đã chuẩn bị xong thư mục driver chuẩn mod Dartraiden!\nBạn có thể nhấn Bắt đầu Cài đặt Driver ngay.")
+                else:
+                    self.lbl_status.config(text="Chuẩn bị bộ cài driver thất bại.")
+                    messagebox.showerror("Lỗi", "Chuẩn bị bộ cài driver thất bại. Xem chi tiết log!")
             self.after(0, _done)
 
         threading.Thread(target=_worker, daemon=True).start()

@@ -43,12 +43,104 @@ install_packages() {
     info "Đã cài đặt thành công toàn bộ các thư viện và công cụ hệ thống!"
 }
 
+ensure_dartraiden_modded_driver() {
+    local driver_dir="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}"
+    local installer_bin="${driver_dir}/nvidia-installer"
+    local nv_kernel_obj="${driver_dir}/kernel/nvidia/nv-kernel.o_binary"
+    local run_file="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
+    local tar_file="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.tar.gz"
+    local dart_zip="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.zip"
+
+    local expected_mod_sha="c4f765e92507f350cd7aa7f45fe4c8c6496a9d244d192849e3d9fa31e69a2a57"
+    local expected_zip_sha="6126674523dbac854c93d31a74a45950e5c2322586c362cd4d9b3b8aade9f781"
+
+    step "Kiểm tra tính sẵn sàng của bộ cài Driver mod Dartraiden..."
+
+    # 1. Kiểm tra nếu thư mục giải nén đã có và đã khớp SHA256 của bản mod Dartraiden
+    if [[ -x "${installer_bin}" && -f "${nv_kernel_obj}" ]]; then
+        local current_sha
+        current_sha="$(sha256sum "${nv_kernel_obj}" 2>/dev/null | awk '{print $1}')"
+        if [[ "${current_sha}" == "${expected_mod_sha}" ]]; then
+            info "Thư mục giải nén đã sẵn sàng và khớp 100% chuẩn mod Dartraiden (SHA256: ${current_sha:0:16}...)."
+            return 0
+        else
+            warn "Thư mục driver đã tồn tại nhưng nv-kernel.o_binary chưa được nạp mod Dartraiden (SHA256: ${current_sha:0:16}...). Đang áp dụng bản mod..."
+        fi
+    fi
+
+    # 2. Nếu thư mục chưa có, kiểm tra nếu có file tar.gz (đã mod sẵn) để bung nén nhanh
+    if [[ ! -x "${installer_bin}" && -f "${tar_file}" ]]; then
+        info "Phát hiện gói nén lưu trữ offline ${tar_file}. Đang tiến hành bung nén..."
+        tar -xzf "${tar_file}" -C "${SCRIPT_DIR}"
+        if [[ -x "${installer_bin}" && -f "${nv_kernel_obj}" ]]; then
+            local tar_sha
+            tar_sha="$(sha256sum "${nv_kernel_obj}" 2>/dev/null | awk '{print $1}')"
+            if [[ "${tar_sha}" == "${expected_mod_sha}" ]]; then
+                info "Giải nén thành công gói tar.gz! nv-kernel.o_binary chuẩn mod Dartraiden (SHA256: ${tar_sha:0:16}...)."
+                return 0
+            fi
+        fi
+    fi
+
+    # 3. Nếu chưa có thư mục giải nén: kiểm tra file .run, nếu chưa có thì tải từ NVIDIA
+    if [[ ! -x "${installer_bin}" ]]; then
+        if [[ ! -f "${run_file}" ]]; then
+            step "Chưa tìm thấy bộ cài đặt gốc. Đang tự động tải driver NVIDIA ${DRIVER_VERSION} từ NVIDIA..."
+            info "URL: https://us.download.nvidia.com/XFree86/Linux-x86_64/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
+            local official_url="https://us.download.nvidia.com/XFree86/Linux-x86_64/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
+            if command -v curl >/dev/null 2>&1; then
+                curl -fSL "${official_url}" -o "${run_file}"
+            else
+                wget -c "${official_url}" -O "${run_file}"
+            fi
+            chmod +x "${run_file}"
+            info "Tải thành công bộ cài NVIDIA: ${run_file}"
+        fi
+
+        step "Đang giải nén bộ cài đặt driver bằng lệnh --extract-only..."
+        chmod +x "${run_file}"
+        "${run_file}" --extract-only --target "${driver_dir}"
+        info "Đã giải nén driver ra thư mục: ${driver_dir}"
+    fi
+
+    # 4. Tải bản mod Dartraiden từ GitHub nếu chưa có và áp dụng (ghi đè nv-kernel.o_binary)
+    if [[ ! -f "${dart_zip}" ]]; then
+        step "Đang tải bản mod Dartraiden từ GitHub..."
+        info "URL: https://github.com/dartraiden/NVIDIA-patcher/releases/download/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.zip"
+        local dart_url="https://github.com/dartraiden/NVIDIA-patcher/releases/download/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.zip"
+        if command -v curl >/dev/null 2>&1; then
+            curl -fSL "${dart_url}" -o "${dart_zip}"
+        else
+            wget -c "${dart_url}" -O "${dart_zip}"
+        fi
+        info "Tải thành công gói mod Dartraiden: ${dart_zip}"
+    fi
+
+    info "Đang giải nén và ghi đè kernel/nvidia/nv-kernel.o_binary từ bản mod Dartraiden..."
+    unzip -o "${dart_zip}" -d "${driver_dir}"
+
+    local final_sha
+    final_sha="$(sha256sum "${nv_kernel_obj}" 2>/dev/null | awk '{print $1}')"
+    if [[ "${final_sha}" == "${expected_mod_sha}" ]]; then
+        info "Xác nhận thành công: Thư mục driver đã được tích hợp bản mod Dartraiden chuẩn 100%!"
+    else
+        warn "Lưu ý: SHA256 nv-kernel.o_binary hiện tại là ${final_sha}, kỳ vọng: ${expected_mod_sha}."
+    fi
+
+    # Phân quyền lại thư mục về cho người dùng bình thường
+    local real_user="${SUDO_USER:-}"
+    if [[ -z "${real_user}" ]]; then
+        real_user="$(logname 2>/dev/null || stat -c '%U' "${SCRIPT_DIR}")"
+    fi
+    if [[ -n "${real_user}" && "${real_user}" != "root" && -d "${driver_dir}" ]]; then
+        chown -R "${real_user}:${real_user}" "${driver_dir}" 2>/dev/null || true
+    fi
+}
+
 install_offline_driver() {
     require_root
     local driver_dir="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}"
     local installer_bin="${driver_dir}/nvidia-installer"
-    local run_file="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run"
-    local tar_file="${SCRIPT_DIR}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.tar.gz"
 
     local no_opengl=0
     local use_dkms=1
@@ -62,7 +154,12 @@ install_offline_driver() {
         shift
     done
 
-    step "Bắt đầu cài đặt Driver NVIDIA ${DRIVER_VERSION} từ gói offline..."
+    # Đảm bảo thư mục giải nén chuẩn mod Dartraiden đã sẵn sàng
+    ensure_dartraiden_modded_driver
+
+    [[ -x "${installer_bin}" ]] || die "Không tìm thấy nvidia-installer tại: ${installer_bin} sau khi chuẩn bị!"
+
+    step "Bắt đầu cài đặt Driver NVIDIA ${DRIVER_VERSION} đã tích hợp mod Dartraiden..."
     local args=(
         "--silent"
         "--no-questions"
@@ -81,63 +178,15 @@ install_offline_driver() {
         info "Tùy chọn: Kích hoạt DKMS để tự động cập nhật khi đổi kernel."
     fi
 
-    if [[ -x "${installer_bin}" ]]; then
-        info "Ưu tiên chạy trực tiếp nvidia-installer từ: ${installer_bin}"
-        chmod +x "${installer_bin}"
-        cd "${driver_dir}"
-        info "Đang chạy bộ cài đặt: ./nvidia-installer ${args[*]}"
-        if ! ./nvidia-installer "${args[@]}"; then
-            if [[ -f /var/log/nvidia-installer.log ]]; then
-                warn "Trích xuất 25 dòng cuối log cài đặt /var/log/nvidia-installer.log:"
-                tail -n 25 /var/log/nvidia-installer.log
-            fi
-            die "Cài đặt Driver NVIDIA bằng nvidia-installer thất bại!"
+    chmod +x "${installer_bin}"
+    cd "${driver_dir}"
+    info "Đang chạy bộ cài đặt: ./nvidia-installer ${args[*]}"
+    if ! ./nvidia-installer "${args[@]}"; then
+        if [[ -f /var/log/nvidia-installer.log ]]; then
+            warn "Trích xuất 25 dòng cuối log cài đặt /var/log/nvidia-installer.log:"
+            tail -n 25 /var/log/nvidia-installer.log
         fi
-    elif [[ -f "${tar_file}" ]]; then
-        info "Đang bung nén gói lưu trữ offline đã tích hợp mod dartraiden: ${tar_file}..."
-        cd "${SCRIPT_DIR}"
-        tar -xzf "${tar_file}"
-        if [[ -x "${installer_bin}" ]]; then
-            cd "${driver_dir}"
-            info "Đang chạy bộ cài đặt: ./nvidia-installer ${args[*]}"
-            if ! ./nvidia-installer "${args[@]}"; then
-                if [[ -f /var/log/nvidia-installer.log ]]; then
-                    warn "Trích xuất 25 dòng cuối log cài đặt /var/log/nvidia-installer.log:"
-                    tail -n 25 /var/log/nvidia-installer.log
-                fi
-                die "Cài đặt Driver NVIDIA bằng nvidia-installer thất bại!"
-            fi
-        else
-            die "Không tìm thấy nvidia-installer sau khi giải nén ${tar_file}!"
-        fi
-    elif [[ -f "${run_file}" ]]; then
-        info "Phát hiện file .run gốc: ${run_file}."
-        info "CMP 40HX yêu cầu áp dụng bản vá dartraiden mod trước khi cài đặt."
-        info "Đang tự động giải nén driver bằng --extract-only..."
-        chmod +x "${run_file}"
-        "${run_file}" --extract-only --target "${driver_dir}"
-        
-        local dartraiden_zip="/tmp/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.zip"
-        if [[ ! -f "${dartraiden_zip}" ]]; then
-            info "Đang tải bản vá dartraiden từ GitHub..."
-            local patch_url="https://github.com/dartraiden/NVIDIA-patcher/releases/download/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.zip"
-            curl -fSL "${patch_url}" -o "${dartraiden_zip}" || wget -c "${patch_url}" -O "${dartraiden_zip}"
-        fi
-        
-        info "Đang nạp file kernel mod dartraiden (nv-kernel.o_binary)..."
-        unzip -o "${dartraiden_zip}" -d "${driver_dir}"
-        
-        cd "${driver_dir}"
-        info "Đang chạy bộ cài đặt đã mod: ./nvidia-installer ${args[*]}"
-        if ! ./nvidia-installer "${args[@]}"; then
-            if [[ -f /var/log/nvidia-installer.log ]]; then
-                warn "Trích xuất 25 dòng cuối log cài đặt /var/log/nvidia-installer.log:"
-                tail -n 25 /var/log/nvidia-installer.log
-            fi
-            die "Cài đặt Driver NVIDIA thất bại!"
-        fi
-    else
-        die "Không tìm thấy bộ cài đặt driver nào tại: ${installer_bin}, ${tar_file} hoặc ${run_file}!"
+        die "Cài đặt Driver NVIDIA bằng nvidia-installer thất bại!"
     fi
 
     # Trả quyền thư mục giải nén về cho người dùng bình thường nếu có
@@ -436,6 +485,9 @@ case "${ACTION}" in
         ;;
     install-offline-driver)
         install_offline_driver "$@"
+        ;;
+    prepare-driver)
+        ensure_dartraiden_modded_driver
         ;;
     install-kernel-mod)
         install_kernel_mod "$@"

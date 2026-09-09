@@ -3,6 +3,7 @@
 *.tar.gz
 *.tar.xz
 *.tar.bz2
+*.zip
 NVIDIA-Linux-x86_64-*/
 cmpunlocker_mods_offline.tar.gz
 
