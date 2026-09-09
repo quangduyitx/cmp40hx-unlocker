@@ -87,9 +87,12 @@ cmp-40hx-unlocker/
 ├── gui.py                      # Main Tkinter dark GUI orchestrator
 ├── run_gui.sh                  # GUI launch wrapper
 ├── apply_mod_backend.sh        # Privileged root backend script (pkexec)
-├── test_compute_tflops.py      # Real-time TFLOPS & Tensor Core benchmark
+├── test_compute_native.sh      # Native C++ compute & VRAM benchmark (clpeak, no Python)
+├── test_compute_tflops.py      # Real-time TFLOPS & Tensor Core benchmark (PyTorch)
 ├── setup_resources.sh          # One-click resource downloader & extractor
 ├── install_desktop.sh          # Desktop & App Menu icon installer
+├── bin/                        # Standalone native benchmark binaries
+│   └── clpeak                  # Lightweight OpenCL peak compute profiler (123KB)
 ├── cmpunlocker/                # Cyridd kernel patches & glcore patcher
 │   ├── 0001-cmp40hx-unlock.patch
 │   ├── 0002-cmp40hx-pcie2-unlock.patch
@@ -107,7 +110,7 @@ cmp-40hx-unlocker/
 
 ### 1. Clone & Setup Resources
 ```bash
-git clone https://github.com/your-username/cmp-40hx-unlocker.git
+git clone https://github.com/quangduyitx/cmp40hx-unlocker.git
 cd cmp-40hx-unlocker
 
 # Download & prepare required NVIDIA driver & kernel modules

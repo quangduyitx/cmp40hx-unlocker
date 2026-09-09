@@ -87,9 +87,12 @@ cmp-40hx-unlocker/
 ├── gui.py                      # Ứng dụng giao diện đồ họa chính (Tkinter)
 ├── run_gui.sh                  # Script khởi chạy giao diện nhanh
 ├── apply_mod_backend.sh        # Script thực thi quyền root backend (pkexec)
-├── test_compute_tflops.py      # Bộ đo hiệu năng TFLOPS & Tensor Core thời gian thực
+├── test_compute_native.sh      # Bộ đo hiệu năng Native C++ (clpeak, không cần Python)
+├── test_compute_tflops.py      # Bộ đo hiệu năng TFLOPS & Tensor Core (PyTorch)
 ├── setup_resources.sh          # Script tải tài nguyên driver & kernel tự động
 ├── install_desktop.sh          # Script tạo biểu tượng màn hình & Menu ứng dụng
+├── bin/                        # Thư mục công cụ nhị phân native độc lập
+│   └── clpeak                  # Bộ profiler OpenCL siêu nhẹ (123KB)
 ├── cmpunlocker/                # Thư mục mã nguồn bản mod Cyridd
 │   ├── 0001-cmp40hx-unlock.patch
 │   ├── 0002-cmp40hx-pcie2-unlock.patch
@@ -107,7 +110,7 @@ cmp-40hx-unlocker/
 
 ### 1. Tải dự án & Chuẩn bị tài nguyên
 ```bash
-git clone https://github.com/your-username/cmp-40hx-unlocker.git
+git clone https://github.com/quangduyitx/cmp40hx-unlocker.git
 cd cmp-40hx-unlocker
 
 # Tự động tải driver NVIDIA 610.57.04 và mã nguồn mở (nếu máy chưa có)
