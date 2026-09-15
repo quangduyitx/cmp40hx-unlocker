@@ -74,7 +74,9 @@ The following numbers were verified on real hardware running dual CMP 40HX GPUs:
    - Tkinter dark-theme GUI orchestrator.
    - Automated prerequisite scanning and missing package installer.
    - 1-Click System Audit tool verifying `dmesg`, `nvidia-smi`, `glcore`, and sysfs PCIe.
-   - Built-in live TFLOPS compute and Tensor Core benchmark tool.
+   - **PCIe Gen2 & VBIOS Diagnostic Suite:** Decodes kernel booter retrain codes (`status=1011, 1101, 1102, 1012`), detects VBIOS revisions (`.04` vs `.06`), and evaluates riser card bus integrity.
+   - **Driver Reprobe Tool:** Unbinds and rebinds the NVIDIA driver at runtime to trigger PCIe Gen2 link retrain without risky VBIOS flashing.
+   - Built-in live native C++ (`clpeak`) & PyTorch TFLOPS compute and Tensor Core benchmark tool.
 
 ---
 

@@ -71,10 +71,12 @@ Số liệu dưới đây được đo kiểm thực tế trên hệ thống ch�
    - Bỏ qua tự động cảnh báo X server đang chạy (`--no-x-check`) và nạp đè an toàn (`--allow-installation-with-running-driver`).
 
 6. **Giao diện Đồ họa Hiện đại & Bộ Xác minh 1-Click:**
-   - Ứng dụng Tkinter giao diện tối hiện đại, dễ thao tác.
+   - Ứng dụng Tkinter giao diện tối (Dark Theme) hiện đại, trực quan.
    - Tự động quét và cài đặt các gói công cụ/headers còn thiếu.
    - Công cụ kiểm định toàn diện 5 bước (1-Click Audit) quét dmesg, nvidia-smi, byte glcore và sysfs PCIe.
-   - Tích hợp sẵn công cụ đo TFLOPS tính toán thực tế.
+   - **Bộ Chẩn đoán Lỗi PCIe Gen2 & VBIOS:** Tự động phân tích mã đàm phán booter kernel (`status=1011, 1101, 1102, 1012`), đánh giá phiên bản VBIOS (`.04` vs `.06`) và kiểm định tính toàn vẹn đường truyền cáp Riser.
+   - **Công cụ Driver Reprobe (Gen2):** Hỗ trợ unbind/bind lại driver lúc runtime để ép chu kỳ retrain PCIe Gen2 mà không cần rủi ro nạp lại (flash) VBIOS.
+   - Tích hợp sẵn bộ công cụ đo hiệu năng tính toán Native C++ (`clpeak`) và PyTorch TFLOPS / Tensor Cores.
 
 ---
 

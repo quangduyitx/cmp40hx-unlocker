@@ -475,6 +475,32 @@ update_from_github() {
     info "Hoàn tất kiểm tra và cập nhật từ GitHub!"
 }
 
+driver_reprobe() {
+    require_root
+    local gpu="$1"
+    local reprobe_script="${CMPUNLOCKER_DIR}/tools/cmp40hx-driver-reprobe-gen2.sh"
+    if [ ! -f "$reprobe_script" ]; then
+        log_err "Không tìm thấy script reprobe tại $reprobe_script"
+        exit 1
+    fi
+    chmod +x "$reprobe_script"
+    if [ -n "$gpu" ]; then
+        log_step "Thực thi Driver Reprobe cho GPU: $gpu..."
+        bash "$reprobe_script" --confirm-driver-reprobe --gpu "$gpu" "$@"
+    else
+        mapfile -t gpus < <(lspci -Dnn 2>/dev/null | awk 'tolower($0) ~ /\[10de:1f0b\]/ {print $1}')
+        if [ ${#gpus[@]} -eq 0 ]; then
+            log_err "Không tìm thấy GPU CMP 40HX nào trên máy!"
+            exit 1
+        fi
+        for g in "${gpus[@]}"; do
+            echo ""
+            log_step "Thực thi Driver Reprobe cho GPU: $g..."
+            bash "$reprobe_script" --confirm-driver-reprobe --gpu "$g" "$@" || true
+        done
+    fi
+}
+
 # ---------- CLI Entrypoint ----------
 ACTION="${1:-help}"
 shift || true
@@ -491,6 +517,9 @@ case "${ACTION}" in
         ;;
     install-kernel-mod)
         install_kernel_mod "$@"
+        ;;
+    driver-reprobe)
+        driver_reprobe "$@"
         ;;
     patch-glcore-system)
         patch_glcore_system
@@ -522,6 +551,7 @@ case "${ACTION}" in
         echo "  install-offline-driver [--no-opengl] [--no-dkms]         : Cài đặt driver NVIDIA 610.57.04 (ưu tiên nvidia-installer / .run)"
         echo "  update-from-github                                       : Cập nhật mod từ Cyridd/cmpunlocker trên GitHub"
         echo "  install-kernel-mod [--pcie-diagnostic] [--keep-gsp-off] [--rebar-size=N] : Cài đặt open module mod"
+        echo "  driver-reprobe [--gpu DOMAIN:BUS:DEV.FN]                 : Thực hiện unbind/bind lại driver để thử phục hồi Gen2"
         echo "  patch-glcore-system                                      : Vá thư viện hệ thống glcore (MME 240 -> 0)"
         echo "  restore-glcore-system                                    : Khôi phục thư viện gốc"
         echo "  patch-glcore-local                                       : Tạo thư viện vá cục bộ cho Steam/Game"
